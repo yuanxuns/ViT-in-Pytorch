@@ -36,6 +36,16 @@ src/data/imdb.json
 
 The main configuration lives in [`src/config/config.yaml`](/home/yuanxun/Code/vit/src/config/config.yaml).
 
+## Result
+
+Attention Map Visualization
+
+<img width="224" height="224" alt="input_9" src="https://github.com/user-attachments/assets/fbebe4f4-71c7-4972-ab7d-b01d9837f593" />
+<img width="224" height="224" alt="overlay_9" src="https://github.com/user-attachments/assets/734e9440-ef16-4336-85c3-32e8810d8a8c" />
+
+Positional Embedding Visualization
+
+<img width="532" height="404" alt="position_plot" src="https://github.com/user-attachments/assets/6583c21a-2dd3-46d9-a5a4-0d66cd7e5f32" />
 
 ## Installation
 
@@ -74,17 +84,5 @@ If you change `task_name` in the config, update the log directory accordingly.
 ```bash
 python -m src.inference
 ```
-
-## Result
-
-Attention Map Visualization
-
-<img width="224" height="224" alt="input_9" src="https://github.com/user-attachments/assets/fbebe4f4-71c7-4972-ab7d-b01d9837f593" />
-<img width="224" height="224" alt="overlay_9" src="https://github.com/user-attachments/assets/734e9440-ef16-4336-85c3-32e8810d8a8c" />
-
-Positional Embedding Visualization
-
-<img width="532" height="404" alt="position_plot" src="https://github.com/user-attachments/assets/6583c21a-2dd3-46d9-a5a4-0d66cd7e5f32" />
-
 
 

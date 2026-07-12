@@ -20,9 +20,10 @@ model_params:
   drop_prob: 0.0
 
 train_params:
-  task_name: 'default'
+  device: 'cuda'
+  task_name: 'ViT'
   batch_size: 64
   epochs: 100
-  lr: 0.001
+  lr: 0.0003
   seed: 1111
   ckpt_name: 'vit_ckpt.pth'

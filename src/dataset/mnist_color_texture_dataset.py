@@ -1,9 +1,11 @@
-import numpy as np
-import cv2
-import os
-import torch
 import json
+import os
+
+import cv2
+import numpy as np
+import torch
 from torch.utils.data.dataset import Dataset
+
 
 def get_random_crop(image, crop_h, crop_w):
     h, w = image.shape[:2]
@@ -59,9 +61,14 @@ class MnistDataset(Dataset):
         digit_im[digit_im > 50] = 255
         digit_im[digit_im <= 50] = 0
         mask_val = (digit_im > 0).astype(np.float32)
-        digit_im = np.concatenate((digit_im[:, :, 0][..., None] * float(entry['color_r']),
-                                   digit_im[:, :, 1][..., None] * float(entry['color_g']),
-                                   digit_im[:, :, 2][..., None] * float(entry['color_b'])), axis=-1)
+        digit_im = np.concatenate(
+            (
+                digit_im[:, :, 0][..., None] * float(entry["color_r"]),
+                digit_im[:, :, 1][..., None] * float(entry["color_g"]),
+                digit_im[:, :, 2][..., None] * float(entry["color_b"]),
+            ),
+            axis=-1,
+        )
         im = cv2.imread(os.path.join(self.db_root, entry['texture_image']))
         im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
         if self.split == 'train':
@@ -73,10 +80,14 @@ class MnistDataset(Dataset):
         im_tensor = torch.from_numpy(out_im).permute((2, 0, 1))
         im_tensor = 2 * (im_tensor / 255) - 1
         return {
-            "image" : im_tensor,
-            "texture_cls" : self.texture_to_idx[entry['texture_name']],
-            "number_cls" : digit_cls,
-            "color":torch.as_tensor([float(entry['color_r']),
-                                     float(entry['color_g']),
-                                      float(entry['color_b'])])
+            "image": im_tensor,
+            "texture_cls": self.texture_to_idx[entry["texture_name"]],
+            "number_cls": digit_cls,
+            "color": torch.as_tensor(
+                [
+                    float(entry["color_r"]),
+                    float(entry["color_g"]),
+                    float(entry["color_b"]),
+                ]
+            ),
         }

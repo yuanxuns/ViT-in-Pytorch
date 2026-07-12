@@ -1,4 +1,4 @@
-# Vision Transformer for Colored-Texture MNIST
+# Vision Transformer (ViT) in Pytorch
 
 This repository contains a compact Vision Transformer (ViT) implementation in PyTorch for classifying MNIST digits rendered on textured backgrounds. The project focuses on the full modeling pipeline: patch embedding, multi-head self-attention, transformer encoder layers, training, inference, and simple attention visualizations.
 

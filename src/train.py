@@ -5,7 +5,6 @@ import random
 import numpy as np
 import torch
 import yaml
-from src.model.transformer import ViT
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data.dataloader import DataLoader
@@ -13,6 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from src.dataset.mnist_color_texture_dataset import MnistDataset
+from src.model.vit import ViT
 
 
 def train_for_one_epoch(
@@ -57,9 +57,15 @@ def train(args):
     np.random.seed(seed)
     random.seed(seed)
 
-    device = config["train_params"]["device"]
+    requested_device = config["train_params"]["device"]
+    if requested_device == "cuda" and not torch.cuda.is_available():
+        print("CUDA requested but not available. Falling back to CPU.")
+        device = "cpu"
+    else:
+        device = requested_device
+
     if device == "cuda":
-        torch.cuda.manual_seed_all(args.seed)
+        torch.cuda.manual_seed_all(seed)
 
     # Create the model and dataset
     model = ViT(config["model_params"]).to(device)
@@ -80,16 +86,16 @@ def train(args):
     scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=2, verbose=True)
 
     # Create output directories
-    if not os.path.exists("src/" + config["train_params"]["task_name"]):
-        os.mkdir("src/" + config["train_params"]["task_name"])
+    task_dir = os.path.join("src", config["train_params"]["task_name"])
+    os.makedirs(task_dir, exist_ok=True)
 
-    log_dir = os.path.join("src", config["train_params"]["task_name"], "tensorboard")
+    log_dir = os.path.join(task_dir, "tensorboard")
     writer = SummaryWriter(log_dir=log_dir)
 
     # Load checkpoint if found
     if os.path.exists(
         os.path.join(
-            "src/" + config["train_params"]["task_name"],
+            task_dir,
             config["train_params"]["ckpt_name"],
         )
     ):
@@ -97,7 +103,7 @@ def train(args):
         model.load_state_dict(
             torch.load(
                 os.path.join(
-                    "src/" + config["train_params"]["task_name"],
+                    task_dir,
                     config["train_params"]["ckpt_name"],
                 ),
                 map_location=device,
@@ -117,8 +123,8 @@ def train(args):
             print("Improved Loss to {:.4f} .... Saving Model".format(mean_loss))
             torch.save(
                 model.state_dict(),
-                os.path.join(
-                    "src/" + config["train_params"]["task_name"],
+                    os.path.join(
+                    task_dir,
                     config["train_params"]["ckpt_name"],
                 ),
             )
@@ -127,3 +133,17 @@ def train(args):
             print("No Loss Improvement")
 
     writer.close()
+
+
+def build_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--config-path",
+        default="src/config/config.yaml",
+        help="Path to the YAML config file.",
+    )
+    return parser
+
+
+if __name__ == "__main__":
+    train(build_parser().parse_args())

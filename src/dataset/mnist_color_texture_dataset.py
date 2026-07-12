@@ -11,19 +11,28 @@ def get_random_crop(image, crop_h, crop_w):
     h, w = image.shape[:2]
     max_x = w - crop_w
     max_y = h - crop_h
-    
-    x = np.random.randint(0, max_x)
-    y = np.random.randint(0, max_y)
-    crop = image[y: y + crop_h, x: x + crop_w, :]
+
+    if max_x < 0 or max_y < 0:
+        raise ValueError(
+            f"Crop size {(crop_h, crop_w)} is larger than image size {(h, w)}."
+        )
+
+    x = 0 if max_x == 0 else np.random.randint(0, max_x + 1)
+    y = 0 if max_y == 0 else np.random.randint(0, max_y + 1)
+    crop = image[y : y + crop_h, x : x + crop_w, :]
     return crop
 
 
 def get_center_crop(image):
     h, w = image.shape[:2]
+    if h == w:
+        return image
     if h > w:
-        return image[(h - w) // 2:-(h - w) // 2, :, :]
-    else:
-        return image[:, (w - h) // 2:-(w - h) // 2, :]
+        offset = (h - w) // 2
+        return image[offset : offset + w, :, :]
+
+    offset = (w - h) // 2
+    return image[:, offset : offset + h, :]
 
 
 class MnistDataset(Dataset):

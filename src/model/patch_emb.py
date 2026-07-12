@@ -25,7 +25,7 @@ class PatchEmbedding(nn.Module):
         self.image_width = config["image_width"]
         self.im_channels = config["im_channels"]
         self.emb_dim = config["emb_dim"]
-        self.drop_prob = config["drop_prob"]
+        self.drop_prob = config.get("patch_emb_drop", config["drop_prob"])
 
         num_patches = (self.image_height // self.patch_height) * (
             self.image_width // self.patch_width

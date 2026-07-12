@@ -17,10 +17,10 @@ class Attention(nn.Module):
         """
         super().__init__()
         self.config = config
-        self.num_heads = config["num_heads"]
+        self.num_heads = config.get("num_heads", config["n_heads"])
         self.head_dim = config["head_dim"]
         self.emb_dim = config["emb_dim"]
-        self.drop_prob = config["drop_prob"]
+        self.drop_prob = config.get("attn_drop", config["drop_prob"])
         self.attn_dim = self.num_heads * self.head_dim
 
         self.qkv_proj = nn.Linear(self.emb_dim, 3 * self.attn_dim, bias=False)

@@ -1,5 +1,5 @@
 import torch.nn as nn
-from src.model.patch_embed import PatchEmbedding
+from src.model.patch_emb import PatchEmbedding
 
 from src.model.attention import Attention
 
@@ -102,4 +102,4 @@ class ViT(nn.Module):
         x = self.norm(x)
 
         # (B, num_patches + 1, D) -> (B, num_classes)
-        return self.mlp(x)[:, 0]
+        return self.mlp(x[:, 0])

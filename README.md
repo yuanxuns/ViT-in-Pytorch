@@ -1,8 +1,10 @@
-# Vision Transformer for Colored-Texture MNIST
+# Vision Transformer (ViT) in Pytorch
 
 This repository contains a compact Vision Transformer (ViT) implementation in PyTorch for classifying MNIST digits rendered on textured backgrounds. The project focuses on the full modeling pipeline: patch embedding, multi-head self-attention, transformer encoder layers, training, inference, and simple attention visualizations.
 
 ## Overview
+
+<img width="875" height="586" alt="Screenshot from 2026-07-11 20-05-03" src="https://github.com/user-attachments/assets/d38b3712-474a-4e0e-a11d-e9fc8746c961" />
 
 The model takes an RGB image, splits it into non-overlapping patches, embeds each patch into a token sequence, prepends a learnable class token, and processes the sequence with transformer encoder layers. The final class-token representation is passed to a linear classifier to predict the digit class.
 
@@ -14,57 +16,6 @@ The included dataset loader works with a custom MNIST-based dataset where:
 - evaluation uses centered crops
 
 Although the dataset entries contain texture labels and digit color values, the current training loop optimizes only the digit classification objective.
-
-
-## Model Architecture
-
-### 1. Patch Embedding
-
-Implemented in [`src/model/patch_emb.py`](/home/yuanxun/Code/vit/src/model/patch_emb.py).
-
-- Splits an input image of shape `(B, C, H, W)` into patches
-- Flattens each patch into a vector
-- Projects each patch into `emb_dim`
-- Prepends a learnable class token
-- Adds learnable positional embeddings
-
-For the default configuration:
-
-- image size: `224 x 224`
-- patch size: `16 x 16`
-- number of patches: `14 x 14 = 196`
-- token sequence length: `197` including the class token
-
-### 2. Multi-Head Self-Attention
-
-Implemented in [`src/model/attention.py`](/home/yuanxun/Code/vit/src/model/attention.py).
-
-- projects input tokens into queries, keys, and values
-- reshapes them into multiple attention heads
-- computes scaled dot-product attention
-- concatenates head outputs
-- projects back to the embedding dimension
-
-### 3. Transformer Layer
-
-Implemented in [`src/model/vit.py`](/home/yuanxun/Code/vit/src/model/vit.py).
-
-Each encoder block contains:
-
-- LayerNorm before attention
-- multi-head self-attention
-- residual connection
-- LayerNorm before feed-forward network
-- MLP with GELU and dropout
-- residual connection
-
-### 4. ViT Classifier
-
-Also implemented in [`src/model/vit.py`](/home/yuanxun/Code/vit/src/model/vit.py).
-
-- stacks `n_layers` transformer blocks
-- applies a final LayerNorm
-- uses the class token for digit classification
 
 ## Dataset preparation
 For setting up the mnist dataset: Follow - https://github.com/explainingai-code/Pytorch-VAE#data-preparation
@@ -123,4 +74,17 @@ If you change `task_name` in the config, update the log directory accordingly.
 ```bash
 python -m src.inference
 ```
+
+## Result
+
+Attention Map Visualization
+
+<img width="224" height="224" alt="input_9" src="https://github.com/user-attachments/assets/fbebe4f4-71c7-4972-ab7d-b01d9837f593" />
+<img width="224" height="224" alt="overlay_9" src="https://github.com/user-attachments/assets/734e9440-ef16-4336-85c3-32e8810d8a8c" />
+
+Positional Embedding Visualization
+
+<img width="532" height="404" alt="position_plot" src="https://github.com/user-attachments/assets/6583c21a-2dd3-46d9-a5a4-0d66cd7e5f32" />
+
+
 

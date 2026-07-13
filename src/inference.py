@@ -14,6 +14,7 @@ from src.model.vit import ViT
 
 
 def get_accuracy(model, mnist_loader, device):
+    # Track classification accuracy over the entire evaluation split.
     num_total = 0.0
     num_correct = 0.0
 
@@ -29,11 +30,11 @@ def get_accuracy(model, mnist_loader, device):
 
 
 def visualize_pos_embed(model):
-    # pos_embed = 1 x Num_patches+1 x D
-    # Get indexes after CLS
+    # Slice out the patch tokens; index 0 is reserved for the CLS token.
     pos_emb = model.patch_emb.pos_emb.detach().cpu()[0][1:]
     num_rows = model.patch_emb.image_height // model.patch_emb.patch_height
     num_cols = model.patch_emb.image_width // model.patch_emb.patch_width
+    # Only visualize every other patch token so the grid stays readable.
     selected_rows = list(range(0, num_rows, 2))
     selected_cols = list(range(0, num_cols, 2))
     num_plots = len(selected_rows) * len(selected_cols)
@@ -67,6 +68,7 @@ def visualize_pos_embed(model):
 def visualize_attn_weights(mnist, model, device):
 
     num_images = 10
+    # Sample a small batch so the overlay images are quick to generate.
     idxs = torch.randint(0, len(mnist) - 1, (num_images,))
     ims = torch.cat([mnist[idx]["image"][None, :] for idx in idxs]).float()
     ims = ims.to(device)
@@ -75,7 +77,7 @@ def visualize_attn_weights(mnist, model, device):
     def get_attention(module, inputs, output):
         attentions.append(output.detach().cpu())
 
-    # Add forward hook
+    # Capture each attention dropout output so we can reconstruct attention rollout.
     handles = []
     for name, module in model.named_modules():
         if "attn_dropout" in name:
@@ -85,7 +87,7 @@ def visualize_attn_weights(mnist, model, device):
     for handle in handles:
         handle.remove()
 
-    # Handle residuals
+    # Fold the residual connection into each attention map before rolling them out.
     attentions = [
         (torch.eye(att.size(-1), dtype=att.dtype) + att)
         / (torch.eye(att.size(-1), dtype=att.dtype) + att).sum(dim=-1).unsqueeze(-1)
@@ -93,21 +95,24 @@ def visualize_attn_weights(mnist, model, device):
     ]
 
     result = torch.max(attentions[0], dim=1)[0]
-    # Max or mean both are fine
+    # Propagate the strongest attention path through the stack.
     for i in range(1, len(attentions)):
         att = torch.max(attentions[i], dim=1)[0]
         result = torch.matmul(att, result)
 
     masks = result
+    # Remove the CLS token so the remaining mask maps directly to image patches.
     masks = masks[:, 0, 1:]
     num_rows = model.patch_emb.image_height // model.patch_emb.patch_height
     num_cols = model.patch_emb.image_width // model.patch_emb.patch_width
     for i in range(num_images):
+        # Convert the normalized tensor back to an image layout for OpenCV.
         im_input = torch.permute(ims[i].detach().cpu(), (1, 2, 0)).numpy()
         im_input = im_input[:, :, [2, 1, 0]]
         im_input = (im_input + 1) / 2 * 255
         mask = masks[i].reshape((num_rows, num_cols)).numpy()
 
+        # Scale each mask independently so the heatmap contrast is easy to see.
         mask = mask / np.max(mask)
 
         mask = cv2.resize(
@@ -130,6 +135,7 @@ def inference(args):
     print(config)
 
     requested_device = config["train_params"]["device"]
+    # Prefer CUDA when requested, but keep the script usable on CPU-only machines.
     if requested_device == "cuda" and not torch.cuda.is_available():
         print("CUDA requested but not available. Falling back to CPU.")
         device = "cpu"
@@ -152,7 +158,7 @@ def inference(args):
 
     task_dir = os.path.join("src", config["train_params"]["task_name"])
 
-    # Load checkpoint if found
+    # Restore the latest saved weights if a checkpoint exists for this task.
     if os.path.exists(
         os.path.join(
             task_dir,
@@ -160,6 +166,7 @@ def inference(args):
         )
     ):
         print("Loading checkpoint")
+        # Load weights onto the active device so inference works without extra moves.
         model.load_state_dict(
             torch.load(
                 os.path.join(
@@ -180,11 +187,11 @@ def inference(args):
         )
     model.eval()
     with torch.no_grad():
-        # Run inference and measure accuracy on number
+        # Evaluate classification accuracy on the held-out test split.
         get_accuracy(model, mnist_loader, device)
-        # Visualize positional embedding
+        # Save a similarity heatmap for the learned positional embeddings.
         visualize_pos_embed(model)
-        # Visualize attention weights
+        # Save attention rollout overlays for a small batch of test images.
         visualize_attn_weights(mnist, model, device)
 
 

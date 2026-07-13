@@ -18,6 +18,7 @@ from src.model.vit import ViT
 def train_for_one_epoch(
     epoch_idx, model, mnist_loader, optimizer, device, writer, global_step
 ):
+    # Accumulate batch losses so we can report a stable epoch-level mean.
     losses = []
     criterion = torch.nn.CrossEntropyLoss()
     progress_bar = tqdm(mnist_loader, desc=f"Epoch {epoch_idx + 1}")
@@ -25,9 +26,11 @@ def train_for_one_epoch(
         im = data["image"].float().to(device)
         number_cls = data["number_cls"].long().to(device)
 
+        # Standard forward/backward/update step for one mini-batch.
         optimizer.zero_grad()
         model_output = model(im)
         loss = criterion(model_output, number_cls)
+        # Log batch loss immediately so TensorBoard shows fine-grained training dynamics.
         losses.append(loss.item())
         writer.add_scalar("train/loss_step", loss.item(), global_step)
         loss.backward()
@@ -40,18 +43,19 @@ def train_for_one_epoch(
             epoch_idx + 1, np.mean(losses)
         )
     )
+    # Return the mean loss and updated step counter to the outer training loop.
     return np.mean(losses), global_step
 
 
 def train(args):
-    #  Read the config file
+    # Load the experiment config that drives model, data, and optimization settings.
     with open(args.config_path, "r") as file:
         try:
             config = yaml.safe_load(file)
         except yaml.YAMLError as exc:
             print(exc)
 
-    # Set the desired seed value
+    # Seed all random number generators so runs are reproducible.
     seed = config["train_params"]["seed"]
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -65,9 +69,10 @@ def train(args):
         device = requested_device
 
     if device == "cuda":
+        # Seed all CUDA kernels as well when training on GPU.
         torch.cuda.manual_seed_all(seed)
 
-    # Create the model and dataset
+    # Build the model and training dataset from the config.
     model = ViT(config["model_params"]).to(device)
     mnist = MnistDataset(
         "train",
@@ -83,16 +88,17 @@ def train(args):
     )
     num_epochs = config["train_params"]["epochs"]
     optimizer = Adam(model.parameters(), lr=config["train_params"]["lr"])
+    # Reduce the learning rate when the epoch loss stops improving.
     scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=2, verbose=True)
 
-    # Create output directories
+    # Create the run directory that will hold checkpoints and logs.
     task_dir = os.path.join("src", config["train_params"]["task_name"])
     os.makedirs(task_dir, exist_ok=True)
 
     log_dir = os.path.join(task_dir, "tensorboard")
     writer = SummaryWriter(log_dir=log_dir)
 
-    # Load checkpoint if found
+    # Resume from the most recent checkpoint when one is available.
     if os.path.exists(
         os.path.join(
             task_dir,
@@ -117,8 +123,9 @@ def train(args):
             epoch_idx, model, mnist_loader, optimizer, device, writer, global_step
         )
         writer.add_scalar("train/loss_epoch", mean_loss, epoch_idx)
+        # Drive the scheduler from epoch-average loss rather than noisy batch loss.
         scheduler.step(mean_loss)
-        # Simply update checkpoint if found better version
+        # Keep only the best checkpoint seen so far.
         if mean_loss < best_loss:
             print("Improved Loss to {:.4f} .... Saving Model".format(mean_loss))
             torch.save(
